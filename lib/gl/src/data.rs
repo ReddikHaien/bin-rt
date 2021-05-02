@@ -1,4 +1,5 @@
 extern crate glfw;
+extern crate gl;
 
 use glfw::{Action, Glfw};
 

@@ -5,7 +5,7 @@ Render.initialize();
 const window = Render.createWindow();
 Render.makeWindowCurrent(window);
 
-
+Render.setClearColor(1,0,0,1);
 
 console.log("ferdig med init");
 

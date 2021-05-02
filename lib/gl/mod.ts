@@ -97,6 +97,16 @@ export const Render ={
         listeners.get(event)?.methods.push(listener);
     },
 
+    setClearColor(r: number, g: number, b: number, a: number){
+        let buffer = new ArrayBuffer(16);
+        let view = new DataView(buffer);
+        view.setFloat32(0,r,false);
+        view.setFloat32(4,g,false);
+        view.setFloat32(8,b,false);
+        view.setFloat32(12,a,false);
+        (Deno as any).core.opSync("op_set_clear_color",null,new Uint8Array(buffer));
+    },
+
     cleanUp(){
         Deno.close(plugin);
     },

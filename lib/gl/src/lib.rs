@@ -1,5 +1,4 @@
-#[path = "./data.rs"]
-mod data;
+#[path = "./data.rs"] mod data;
 
 use glfw::{Action, Context, Key};
 
@@ -20,13 +19,14 @@ pub fn deno_plugin_init(interface: &mut dyn Interface) {
     interface.register_op("op_window_make_current", window_make_current);
     interface.register_op("op_poll_events",window_poll);
     interface.register_op("op_window_should_close", window_should_close);
+
+    interface.register_op("op_set_clear_color", set_clear_color);
 }
 
 pub fn initialize_render(interface: &mut dyn Interface, zero_copy: Option<ZeroCopyBuf>) -> Op {
     let ginstance = glfw::init(glfw::FAIL_ON_ERRORS).expect("Failed to initialize glfw");
 
-    gl::load_with(|s| ginstance.get_proc_address_raw(s) as *const _);
-
+    
     unsafe {
         DATA = Some(data::RenderData {
             glfw: ginstance,
@@ -78,6 +78,7 @@ pub fn window_make_current(interface: &mut dyn Interface, zero_copy: Option<Zero
                                 Some((window,_) ) =>{
                                     window.set_key_polling(true);
                                     window.make_current();
+                                    gl::load_with(|s| window.get_proc_address(s) as *const _);
                                 },
                                 None => panic!("No window with the given id {}",index)
                             }    
@@ -94,7 +95,7 @@ pub fn window_make_current(interface: &mut dyn Interface, zero_copy: Option<Zero
 
 pub fn window_should_close(interface: &mut dyn Interface, zero_copy: Option<ZeroCopyBuf>) -> Op {
     let mut should_close: u8 = 1;
-    let index = zero_copy_to_int(zero_copy).expect("Failed to convert buffer to int");
+    let index = zero_copy_to_int(&zero_copy).expect("Failed to convert buffer to int");
     unsafe{
         match DATA{
             Some(ref d)=>{
@@ -105,7 +106,7 @@ pub fn window_should_close(interface: &mut dyn Interface, zero_copy: Option<Zero
                         should_close = match window.should_close() {true => 1u8, _ => 0};
                     },
                     None => panic!("No window with the given id {}",index)
-                }    
+                }
             },
             None => panic!("Render not initialized")
         }
@@ -118,7 +119,7 @@ pub fn window_poll(interface: &mut dyn Interface, zero_copy: Option<ZeroCopyBuf>
         match DATA{
             Some(ref mut d) =>{
 
-                let index = zero_copy_to_int(zero_copy).expect("Failed to convert buffer to int");
+                let index = zero_copy_to_int(&zero_copy).expect("Failed to convert buffer to int");
 
                 d.glfw.poll_events();
 
@@ -165,9 +166,23 @@ pub fn window_poll(interface: &mut dyn Interface, zero_copy: Option<ZeroCopyBuf>
 }
 
 
-pub fn setClearColor(interface: &mut dyn Interface, zero_copy: Option<ZeroCopyBuf>) -> Op{
-    
+pub fn set_clear_color(interface: &mut dyn Interface, zero_copy: Option<ZeroCopyBuf>) -> Op{
+    let r = zero_copy_to_float(&zero_copy, 0);
+    let g = zero_copy_to_float(&zero_copy, 4);
+    let b = zero_copy_to_float(&zero_copy, 8);
+    let a = zero_copy_to_float(&zero_copy, 12);
+    unsafe{
+        gl::ClearColor(r,g,b,a);
+    }
     Op::Sync(OpResponse::Buffer(Box::new([0])))    
+}
+
+pub fn clear_window(interface: &mut dyn Interface, zero_copy: Option<ZeroCopyBuf>) -> Op{
+    let mask = zero_copy_to_int(&zero_copy).or::<u32>(Ok(0u32)).unwrap();
+    unsafe{
+        gl::Clear(mask);
+    }
+    Op::Sync(OpResponse::Buffer(Box::new([0])))
 }
 
 
@@ -175,7 +190,28 @@ pub fn terminate_render(interface: &mut dyn Interface, zero_copy: Option<ZeroCop
     Op::Sync(OpResponse::Buffer(Box::new([0])))
 }
 
-fn zero_copy_to_int(zero_copy: Option<ZeroCopyBuf>) -> Result<u32, String>{
+fn zero_copy_to_float(zero_copy: &Option<ZeroCopyBuf>,index: usize) -> f32{
+    match zero_copy{
+        Some(d)=>{
+            if d.len() - index >= 4{
+
+                 f32::from_le_bytes(
+                    d[index..index+4]
+                    .try_into().
+                    expect("Failed to convert buffer to float")
+                 )
+            }
+            else{
+                0f32
+            }
+        },
+        None =>{
+            0f32
+        } 
+    }
+}
+
+fn zero_copy_to_int(zero_copy: &Option<ZeroCopyBuf>) -> Result<u32, String>{
     match zero_copy{
         Some(d) =>{
             if d.len() == 4 {
