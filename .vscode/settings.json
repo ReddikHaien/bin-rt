@@ -1,0 +1,16 @@
+{
+    "deno.enable": true,
+    "deno.lint": true,
+    "deno.unstable": true,
+
+
+    "actionButtons": {
+        "commands": [
+            {
+                "name": "🛠build plugins🛠",
+                "command": "cd lib/gl ; cargo build ; cd ../..",
+                "color": "orange"
+            }
+        ]
+    }
+}
