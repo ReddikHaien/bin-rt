@@ -21,6 +21,7 @@ pub fn deno_plugin_init(interface: &mut dyn Interface) {
     interface.register_op("op_window_should_close", window_should_close);
 
     interface.register_op("op_set_clear_color", set_clear_color);
+    interface.register_op("op_clear",clear_window);
 }
 
 pub fn initialize_render(interface: &mut dyn Interface, zero_copy: Option<ZeroCopyBuf>) -> Op {
@@ -114,6 +115,9 @@ pub fn window_should_close(interface: &mut dyn Interface, zero_copy: Option<Zero
     Op::Sync(OpResponse::Buffer(Box::new([should_close])))
 }
 
+
+
+
 pub fn window_poll(interface: &mut dyn Interface, zero_copy: Option<ZeroCopyBuf>) -> Op{
     unsafe{
         match DATA{
@@ -161,10 +165,29 @@ pub fn window_poll(interface: &mut dyn Interface, zero_copy: Option<ZeroCopyBuf>
             _ => panic!("Render not initialized")
         }
     }
-
-
 }
 
+pub fn window_swap_buffer(interface: &mut dyn Interface, zero_copy: Option<ZeroCopyBuf>) -> Op{
+
+    let index = zero_copy_to_int(&zero_copy).expect("Failed to convert buffer to int");
+    unsafe{
+        match DATA{
+            Some(ref d)=>{
+                let w = &d.windows;
+                let mut tuple = &w.get_mut(&index);
+                match tuple{
+                    Some(tuple) =>{
+                        tuple.0.swap_buffers();
+                    },
+                    None => panic!("No window with the given id {}",index)
+                }
+            },
+            None => panic!("Render not initialized")
+        }
+    }
+
+    Op::Sync(OpResponse::Buffer(Box::new([0])))    
+}
 
 pub fn set_clear_color(interface: &mut dyn Interface, zero_copy: Option<ZeroCopyBuf>) -> Op{
     let r = zero_copy_to_float(&zero_copy, 0);

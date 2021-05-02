@@ -52,6 +52,8 @@ const listeners: Map<WindowEvents,Listener> = new Map();
 
 
 export const Render ={
+    get COLOR_BUFFER_BIT() {return 16384; },
+
     initialize(){
         (Deno as any).core.opSync("op_initialize");
     },
@@ -106,6 +108,12 @@ export const Render ={
         view.setFloat32(12,a,false);
         (Deno as any).core.opSync("op_set_clear_color",null,new Uint8Array(buffer));
     },
+
+    clear(mask: number){
+        let buffer = intToBuf(mask);
+        (Deno as any).core.opSync("op_clear",null,buffer);
+    },
+    
 
     cleanUp(){
         Deno.close(plugin);

@@ -10,6 +10,7 @@ Render.setClearColor(1,0,0,1);
 console.log("ferdig med init");
 
 while(!Render.shouldClose(window) ) {
+    Render.clear(Render.COLOR_BUFFER_BIT);
     Render.pollWindow(window);
 }
 
