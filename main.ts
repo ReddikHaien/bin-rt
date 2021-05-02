@@ -5,9 +5,7 @@ Render.initialize();
 const window = Render.createWindow();
 Render.makeWindowCurrent(window);
 
-Render.addListener(WindowEvents.KeyEvent,(key,scancode,action,modifier) =>{
-    console.log(key+"("+scancode+") " + Action[action]);
-});
+
 
 console.log("ferdig med init");
 

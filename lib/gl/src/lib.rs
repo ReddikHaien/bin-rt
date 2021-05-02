@@ -24,6 +24,9 @@ pub fn deno_plugin_init(interface: &mut dyn Interface) {
 
 pub fn initialize_render(interface: &mut dyn Interface, zero_copy: Option<ZeroCopyBuf>) -> Op {
     let ginstance = glfw::init(glfw::FAIL_ON_ERRORS).expect("Failed to initialize glfw");
+
+    gl::load_with(|s| ginstance.get_proc_address_raw(s) as *const _);
+
     unsafe {
         DATA = Some(data::RenderData {
             glfw: ginstance,
@@ -127,12 +130,13 @@ pub fn window_poll(interface: &mut dyn Interface, zero_copy: Option<ZeroCopyBuf>
                         for (_,event) in glfw::flush_messages(&w.1){
                             match event{
                                 glfw::WindowEvent::Key(key,scancode,action,_) => {
-                                    result.push(1u8);
+                                    result.push(1u8);        
                                     let bytes = scancode.to_be_bytes();
                                     result.push(bytes[0]);
                                     result.push(bytes[1]);
                                     result.push(bytes[2]);
                                     result.push(bytes[3]);
+                                    
                                     match action {
                                         Action::Release => result .push(0u8),
                                         Action::Press => result.push(1u8),
@@ -159,6 +163,13 @@ pub fn window_poll(interface: &mut dyn Interface, zero_copy: Option<ZeroCopyBuf>
 
 
 }
+
+
+pub fn setClearColor(interface: &mut dyn Interface, zero_copy: Option<ZeroCopyBuf>) -> Op{
+    
+    Op::Sync(OpResponse::Buffer(Box::new([0])))    
+}
+
 
 pub fn terminate_render(interface: &mut dyn Interface, zero_copy: Option<ZeroCopyBuf>) -> Op {
     Op::Sync(OpResponse::Buffer(Box::new([0])))
