@@ -3,14 +3,18 @@
     "deno.lint": true,
     "deno.unstable": true,
 
-
     "actionButtons": {
         "commands": [
             {
                 "name": "🛠build plugins🛠",
                 "command": "cd lib/gl ; cargo build ; cd ../..",
                 "color": "orange"
-            }
-        ]
+            },
+            {
+                "name": "test plugin",
+                "command": "cd lib/gl ; cargo build ; cd ../.. ; deno run --allow-plugin --allow-read --allow-write --unstable main.ts",
+                "color": "lime"
+            } 
+        ],
     }
 }
