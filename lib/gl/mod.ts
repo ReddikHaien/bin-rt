@@ -119,6 +119,7 @@ export const Render ={
         (Deno as any).core.opSync("op_swap_buffers",null,buffer);
     },
 
+
     cleanUp(){
         Deno.close(plugin);
     },

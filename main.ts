@@ -16,7 +16,7 @@ while(!Render.shouldClose(window)){
 }
 
 Render.cleanUp();
-console.log("Dette virket!!");  
+console.log("Dette virket!!");
 
 
 
