@@ -5,14 +5,18 @@ Render.initialize();
 const window = Render.createWindow();
 Render.makeWindowCurrent(window);
 
-Render.setClearColor(1,0,0,1);
+Render.setClearColor(0,0,0,1);
 
 console.log("ferdig med init");
 
-while(!Render.shouldClose(window) ) {
+while(!Render.shouldClose(window)){
     Render.clear(Render.COLOR_BUFFER_BIT);
     Render.pollWindow(window);
+    Render.swapWindowBuffer(window);
 }
 
 Render.cleanUp();
-console.log("Dette virket!!");
+console.log("Dette virket!!");  
+
+
+

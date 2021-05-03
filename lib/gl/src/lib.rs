@@ -19,7 +19,8 @@ pub fn deno_plugin_init(interface: &mut dyn Interface) {
     interface.register_op("op_window_make_current", window_make_current);
     interface.register_op("op_poll_events",window_poll);
     interface.register_op("op_window_should_close", window_should_close);
-
+    interface.register_op("op_swap_buffers", window_swap_buffer);
+    
     interface.register_op("op_set_clear_color", set_clear_color);
     interface.register_op("op_clear",clear_window);
 }
@@ -79,6 +80,7 @@ pub fn window_make_current(interface: &mut dyn Interface, zero_copy: Option<Zero
                                 Some((window,_) ) =>{
                                     window.set_key_polling(true);
                                     window.make_current();
+                                    
                                     gl::load_with(|s| window.get_proc_address(s) as *const _);
                                 },
                                 None => panic!("No window with the given id {}",index)
@@ -172,9 +174,9 @@ pub fn window_swap_buffer(interface: &mut dyn Interface, zero_copy: Option<ZeroC
     let index = zero_copy_to_int(&zero_copy).expect("Failed to convert buffer to int");
     unsafe{
         match DATA{
-            Some(ref d)=>{
-                let w = &d.windows;
-                let mut tuple = &w.get_mut(&index);
+            Some(ref mut d)=>{
+                let mut w = &mut d.windows;
+                let mut tuple = w.get_mut(&index);
                 match tuple{
                     Some(tuple) =>{
                         tuple.0.swap_buffers();
@@ -194,6 +196,7 @@ pub fn set_clear_color(interface: &mut dyn Interface, zero_copy: Option<ZeroCopy
     let g = zero_copy_to_float(&zero_copy, 4);
     let b = zero_copy_to_float(&zero_copy, 8);
     let a = zero_copy_to_float(&zero_copy, 12);
+    println!("{} {} {} {}",r,g,b,a);
     unsafe{
         gl::ClearColor(r,g,b,a);
     }

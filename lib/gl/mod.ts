@@ -102,10 +102,10 @@ export const Render ={
     setClearColor(r: number, g: number, b: number, a: number){
         let buffer = new ArrayBuffer(16);
         let view = new DataView(buffer);
-        view.setFloat32(0,r,false);
-        view.setFloat32(4,g,false);
-        view.setFloat32(8,b,false);
-        view.setFloat32(12,a,false);
+        view.setFloat32(0,r,true);
+        view.setFloat32(4,g,true);
+        view.setFloat32(8,b,true);
+        view.setFloat32(12,a,true);
         (Deno as any).core.opSync("op_set_clear_color",null,new Uint8Array(buffer));
     },
 
@@ -113,7 +113,11 @@ export const Render ={
         let buffer = intToBuf(mask);
         (Deno as any).core.opSync("op_clear",null,buffer);
     },
-    
+
+    swapWindowBuffer(window: number){
+        let buffer = intToBuf(window);
+        (Deno as any).core.opSync("op_swap_buffers",null,buffer);
+    },
 
     cleanUp(){
         Deno.close(plugin);
