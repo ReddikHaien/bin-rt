@@ -155,9 +155,13 @@ export class Window{
 export class GlBuffer{
     #bufferId: number;
     #bufferType: number;
+    #sharedBufferReference: number;
+    #sharedBufferInstance: Uint8Array;
     private constructor(bufferId: number,bufferType:number){
         this.#bufferId = bufferId ?? 0;
-        this.#bufferType = bufferType
+        this.#bufferType = bufferType;
+        this.#sharedBufferReference = 0;
+        this.#sharedBufferInstance = new Uint8Array(0);
     }
     static createArrayBuffer(){
         let bufferId = invokeMethod(ops.opCreateBuffer);
@@ -165,25 +169,20 @@ export class GlBuffer{
     }
 
     setData(data: Float32Array,usage: GlEnums.STATIC_DRAW | GlEnums.STATIC_READ){
-        //layout id target size usage buffer
-        const buffer = new Uint8Array(4 + 4 + 4 + 4 + data.buffer.byteLength);
+        //layout id target size usage buffer reference
+        const buffer = new Uint8Array(4 + 4 + 4 + 4 + 4);
         const view = new DataView(buffer.buffer);
-        console.log(buffer.buffer.byteLength);
+        
         view.setInt32(0,this.#bufferId);
         view.setInt32(4,this.#bufferType);
         view.setInt32(8,data.length*4);
         view.setInt32(12,usage);
-        data.forEach((x, i) =>{
-            view.setFloat32(16+i,x);
-        });
+
+        if (data.byteLength > this.#sharedBufferInstance.byteLength || data.byteLength < this.#sharedBufferInstance.length*0.7){
+            
+        }
+
         invokeMethod(ops.opSetBufferData,buffer);
     }
     
-}
-
-export function createSharedBuffer(buffer: Uint8Array){
-    return invokeMethod(ops.createSharedBuffer,buffer);
-}
-export function printSharedBuffer(){
-    return invokeMethod(ops.printSharedBuffer);
 }

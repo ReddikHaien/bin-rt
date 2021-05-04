@@ -30,8 +30,6 @@ export const opSetBufferData = ops.op_set_buffer_data;
 export const opSetClearColor = ops.op_set_clear_color;
 export const opClear = ops.op_clear;
 
-export const createSharedBuffer = ops.op_create_shared_buffer;
-export const printSharedBuffer = ops.op_print_shared_buffer;
 
 export function closePlugin(){
     Deno.close(plugin);

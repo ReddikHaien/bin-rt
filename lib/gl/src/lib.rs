@@ -12,8 +12,6 @@ use std::convert::TryInto;
 
 static mut DATA: Option<data::RenderData> = None;
 
-static mut BUFFER: Option<deno_core::ZeroCopyBuf> = None;
-
 #[no_mangle]
 pub fn deno_plugin_init(interface: &mut dyn Interface) {
     println!("registrerer metoder");
@@ -30,8 +28,6 @@ pub fn deno_plugin_init(interface: &mut dyn Interface) {
 
     interface.register_op("op_create_buffer", create_buffer);
     interface.register_op("op_set_buffer_data", set_buffer_data);
-    interface.register_op("op_create_shared_buffer", create_shared_buffer);
-    interface.register_op("op_print_shared_buffer", print_shared_buffer_content);
 }
 
 pub fn initialize_render(interface: &mut dyn Interface, zero_copy: Option<ZeroCopyBuf>) -> Op {
@@ -41,6 +37,7 @@ pub fn initialize_render(interface: &mut dyn Interface, zero_copy: Option<ZeroCo
         DATA = Some(data::RenderData {
             glfw: ginstance,
             windows: std::collections::BTreeMap::new(),
+            shared_buffers: std::collections::BTreeMap::new(),
         });
     }
     Op::Sync(OpResponse::Buffer(Box::new([0])))
@@ -266,36 +263,43 @@ pub fn set_buffer_data(interface: &mut dyn Interface, zero_copy: Option<ZeroCopy
     Op::Sync(OpResponse::Buffer(Box::new([0])))
 }
 
-
 pub fn terminate_render(interface: &mut dyn Interface, zero_copy: Option<ZeroCopyBuf>) -> Op {
     Op::Sync(OpResponse::Buffer(Box::new([0])))
 }
 
-pub fn create_shared_buffer(interface: &mut dyn Interface, zero_copy: Option<ZeroCopyBuf>) -> Op {
-    unsafe{
-        match &BUFFER{
-            Some(d) => (),
-            None => {
-                BUFFER = Some(zero_copy.unwrap());
-            }
-        }
-    }
-    Op::Sync(OpResponse::Buffer(Box::new([0])))
-}
 
-pub fn print_shared_buffer_content(interface: &mut dyn Interface, zero_copy: Option<ZeroCopyBuf>) -> Op {
+pub fn setup_shared_buffer(interface: &mut dyn Interface, zero_copy: Option<ZeroCopyBuf>) -> Op {
+    let mut index: u32 = 0;
     unsafe{
-        match &BUFFER{
-            Some(d) =>{
-                for x in d.to_vec(){
-                    println!("{}",x);
+        match &mut DATA{
+            Some(ref mut d) =>{
+                match zero_copy{
+                    Some(zc) =>{
+                        index = create_identifier();
+                        d.shared_buffers.insert(index,zc);
+                    },
+                    None => (),
                 }
             },
-            None => println!("no data")
+            None => panic!("Render not initialized")
         }
     }
-    Op::Sync(OpResponse::Buffer(Box::new([0])))
+    Op::Sync(OpResponse::Buffer(Box::new(index.to_be_bytes())))
 }
+
+pub fn drop_shared_buffer(interface: &mut dyn Interface, zero_copy: Option<ZeroCopyBuf>) -> Op {
+    let mut index: u32 = zero_copy_to_int(&zero_copy.unwrap(), 0).expect("Failed to get int from buffer");
+    unsafe{
+        match &mut DATA{
+            Some(ref mut d) =>{
+                d.shared_buffers.remove(&index);
+            },
+            None => panic!("Render not initialized")
+        }
+    }
+    Op::Sync(OpResponse::Buffer(Box::new(index.to_be_bytes())))
+}
+
 
 fn zero_copy_to_float(d:&[u8],index: usize) -> f32{
     if d.len() - index >= 4{
