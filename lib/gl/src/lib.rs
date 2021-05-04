@@ -1,6 +1,7 @@
 #[path = "./data.rs"] mod data;
 
 use glfw::{Action, Context, Key};
+use gl;
 
 use deno_core::plugin_api::Interface;
 use deno_core::plugin_api::Op;
@@ -10,6 +11,8 @@ use futures::future::FutureExt;
 use std::convert::TryInto;
 
 static mut DATA: Option<data::RenderData> = None;
+
+static mut BUFFER: Option<deno_core::ZeroCopyBuf> = None;
 
 #[no_mangle]
 pub fn deno_plugin_init(interface: &mut dyn Interface) {
@@ -24,12 +27,16 @@ pub fn deno_plugin_init(interface: &mut dyn Interface) {
 
     interface.register_op("op_set_clear_color", set_clear_color);
     interface.register_op("op_clear",clear_window);
+
+    interface.register_op("op_create_buffer", create_buffer);
+    interface.register_op("op_set_buffer_data", set_buffer_data);
+    interface.register_op("op_create_shared_buffer", create_shared_buffer);
+    interface.register_op("op_print_shared_buffer", print_shared_buffer_content);
 }
 
 pub fn initialize_render(interface: &mut dyn Interface, zero_copy: Option<ZeroCopyBuf>) -> Op {
     let ginstance = glfw::init(glfw::FAIL_ON_ERRORS).expect("Failed to initialize glfw");
 
-    
     unsafe {
         DATA = Some(data::RenderData {
             glfw: ginstance,
@@ -99,7 +106,7 @@ pub fn window_make_current(interface: &mut dyn Interface, zero_copy: Option<Zero
 
 pub fn window_should_close(interface: &mut dyn Interface, zero_copy: Option<ZeroCopyBuf>) -> Op {
     let mut should_close: u8 = 1;
-    let index = zero_copy_to_int(&zero_copy).expect("Failed to convert buffer to int");
+    let index = zero_copy_to_int(&zero_copy.unwrap(),0).expect("Failed to convert buffer to int");
     unsafe{
         match DATA{
             Some(ref d)=>{
@@ -119,7 +126,7 @@ pub fn window_should_close(interface: &mut dyn Interface, zero_copy: Option<Zero
 }
 
 pub fn window_activate_key_polling(interface: &mut dyn Interface, zero_copy: Option<ZeroCopyBuf>) -> Op{
-    let index = zero_copy_to_int(&zero_copy).expect("Failed to convert buffer to int");
+    let index = zero_copy_to_int(&zero_copy.unwrap(),0).expect("Failed to convert buffer to int");
     unsafe{
         match DATA{
             Some(ref mut d)=>{
@@ -145,7 +152,7 @@ pub fn window_poll(interface: &mut dyn Interface, zero_copy: Option<ZeroCopyBuf>
         match DATA{
             Some(ref mut d) =>{
 
-                let index = zero_copy_to_int(&zero_copy).expect("Failed to convert buffer to int");
+                let index = zero_copy_to_int(&zero_copy.unwrap(),0).expect("Failed to convert buffer to int");
 
                 d.glfw.poll_events();
 
@@ -191,7 +198,7 @@ pub fn window_poll(interface: &mut dyn Interface, zero_copy: Option<ZeroCopyBuf>
 
 pub fn window_swap_buffer(interface: &mut dyn Interface, zero_copy: Option<ZeroCopyBuf>) -> Op{
 
-    let index = zero_copy_to_int(&zero_copy).expect("Failed to convert buffer to int");
+    let index = zero_copy_to_int(&zero_copy.unwrap(),0).expect("Failed to convert buffer to int");
     unsafe{
         match DATA{
             Some(ref mut d)=>{
@@ -212,10 +219,11 @@ pub fn window_swap_buffer(interface: &mut dyn Interface, zero_copy: Option<ZeroC
 }
 
 pub fn set_clear_color(interface: &mut dyn Interface, zero_copy: Option<ZeroCopyBuf>) -> Op{
-    let r = zero_copy_to_float(&zero_copy, 0);
-    let g = zero_copy_to_float(&zero_copy, 4);
-    let b = zero_copy_to_float(&zero_copy, 8);
-    let a = zero_copy_to_float(&zero_copy, 12);
+    let slice = &zero_copy.unwrap();
+    let r = zero_copy_to_float(&slice, 0);
+    let g = zero_copy_to_float(&slice, 4);
+    let b = zero_copy_to_float(&slice, 8);
+    let a = zero_copy_to_float(&slice, 12);
     println!("{} {} {} {}",r,g,b,a);
     unsafe{
         gl::ClearColor(r,g,b,a);
@@ -224,9 +232,36 @@ pub fn set_clear_color(interface: &mut dyn Interface, zero_copy: Option<ZeroCopy
 }
 
 pub fn clear_window(interface: &mut dyn Interface, zero_copy: Option<ZeroCopyBuf>) -> Op{
-    let mask = zero_copy_to_int(&zero_copy).or::<u32>(Ok(0u32)).unwrap();
+    let mask = zero_copy_to_int(&zero_copy.unwrap(),0).or::<u32>(Ok(0u32)).unwrap();
     unsafe{
         gl::Clear(mask);
+    }
+    Op::Sync(OpResponse::Buffer(Box::new([0])))
+}
+
+
+pub fn create_buffer(interface: &mut dyn Interface, zero_copy: Option<ZeroCopyBuf>) -> Op{
+    let mut bufferId: u32 = 0;
+
+    unsafe{
+        
+        gl::CreateBuffers(1,&mut bufferId);
+    }
+
+    Op::Sync(OpResponse::Buffer(Box::new(bufferId.to_be_bytes())))
+}
+
+pub fn set_buffer_data(interface: &mut dyn Interface, zero_copy: Option<ZeroCopyBuf>) -> Op {
+    let slice = zero_copy.unwrap();
+    let bufferId = zero_copy_to_int(&slice, 0).expect("Failed to get BufferId from buffer");
+    let target = zero_copy_to_int(&slice, 4).expect("Failed to get target from buffer");;
+    let size = zero_copy_to_int(&slice, 8).expect("Failed to get size from buffer");;
+    let usage = zero_copy_to_int(&slice, 12).expect("Failed to get usage from buffer");;
+    let data_slice = &slice[16..slice.len()];
+    unsafe{
+        gl::BindBuffer(target, bufferId);
+        gl::BufferData(target, size as isize, data_slice.as_ptr() as *const std::ffi::c_void, usage);
+        gl::BindBuffer(0,bufferId);
     }
     Op::Sync(OpResponse::Buffer(Box::new([0])))
 }
@@ -236,43 +271,58 @@ pub fn terminate_render(interface: &mut dyn Interface, zero_copy: Option<ZeroCop
     Op::Sync(OpResponse::Buffer(Box::new([0])))
 }
 
-fn zero_copy_to_float(zero_copy: &Option<ZeroCopyBuf>,index: usize) -> f32{
-    match zero_copy{
-        Some(d)=>{
-            if d.len() - index >= 4{
-
-                 f32::from_le_bytes(
-                    d[index..index+4]
-                    .try_into().
-                    expect("Failed to convert buffer to float")
-                 )
+pub fn create_shared_buffer(interface: &mut dyn Interface, zero_copy: Option<ZeroCopyBuf>) -> Op {
+    unsafe{
+        match &BUFFER{
+            Some(d) => (),
+            None => {
+                BUFFER = Some(zero_copy.unwrap());
             }
-            else{
-                0f32
-            }
-        },
-        None =>{
-            0f32
-        } 
+        }
     }
+    Op::Sync(OpResponse::Buffer(Box::new([0])))
 }
 
-fn zero_copy_to_int(zero_copy: &Option<ZeroCopyBuf>) -> Result<u32, String>{
-    match zero_copy{
-        Some(d) =>{
-            if d.len() == 4 {
-                let index = u32::from_be_bytes(
-                    d[..]
-                        .try_into()
-                        .expect("Failed to convert slice to array"),
-                );
-                Ok(index)
-            }
-            else{
-                Err(String::from("Expected 4 bytes"))
-            }
-        },
-        _ => Err(String::from("Expected buffer, recieved none"))
+pub fn print_shared_buffer_content(interface: &mut dyn Interface, zero_copy: Option<ZeroCopyBuf>) -> Op {
+    unsafe{
+        match &BUFFER{
+            Some(d) =>{
+                for x in d.to_vec(){
+                    println!("{}",x);
+                }
+            },
+            None => println!("no data")
+        }
+    }
+    Op::Sync(OpResponse::Buffer(Box::new([0])))
+}
+
+fn zero_copy_to_float(d:&[u8],index: usize) -> f32{
+    if d.len() - index >= 4{
+
+        f32::from_be_bytes(
+           d[index..index+4]
+           .try_into().
+           expect("Failed to convert buffer to float")
+        )
+   }
+   else{
+       0f32
+   }
+}
+
+pub fn zero_copy_to_int(d: &[u8], index: usize) -> Result<u32, String>{
+
+    if d.len()-index >= 4 {
+        let index = u32::from_be_bytes(
+            d[index..index+4]
+                .try_into()
+                .expect("Failed to convert slice to array"),
+        );
+        Ok(index)
+    }
+    else{
+        Err(String::from("Expected 4 bytes"))
     }
 }
 
@@ -282,5 +332,61 @@ fn create_identifier() -> u32 {
         let i = ID_COUNTER;
         ID_COUNTER += 1;
         i
+    }
+}
+
+#[cfg(test)]
+mod tests{
+    use super::*;
+
+    #[test]
+    fn u8_slice_to_int_returns_correct_int() {
+        let i: u32 = 1;
+        let bytes = i.to_be_bytes();
+        let result = zero_copy_to_int(&bytes,0);
+        assert_eq!(result,Ok(i));
+    }
+
+    #[test]
+
+    fn u8_slice_to_int_small_slice_returns_err() {
+        let small_buffer: [u8;4] = [0;4];
+        
+        let result = zero_copy_to_int(&small_buffer,1);
+        assert_eq!(Err(String::from("Expected 4 bytes")),result);
+    }
+
+    #[test]
+    fn u8_slice_to_int_big_slice_returns_correct() {
+        let expected = Ok(0x01010101u32);
+        let big_buffer: [u8;5] = [1;5];
+        let result = zero_copy_to_int(&big_buffer,0);
+        assert_eq!(expected,result);
+    }
+
+    #[test]
+    fn u8_slice_to_float_returns_correct_float() {
+        let expected: f32 = 1.0;
+        let bytes = expected.to_be_bytes();
+        let result = zero_copy_to_float(&bytes, 0);
+        assert_eq!(expected,result);
+    }
+
+    #[test]
+    fn u8_slice_to_float_to_few_bytes_returns_0(){
+        let buffer: [u8;4] = [64;4];
+        let expected: f32 = 0.0;
+        let result = zero_copy_to_float(&buffer, 1);
+        assert_eq!(expected,result);
+    }
+
+    #[test]
+    fn create_identifiers_returns_1_2_from_two_calls() {
+        let first_expected = 1;
+        let second_expected = 2;
+        let first_result = create_identifier();
+        let second_result = create_identifier();
+        assert_eq!(first_expected,first_result);
+        assert_eq!(second_expected,second_result);
     }
 }

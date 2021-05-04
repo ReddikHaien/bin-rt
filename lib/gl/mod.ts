@@ -27,16 +27,23 @@ export enum Action{
     Repeat = 2,
 }
 
+export enum GlEnums{
+    COLOR_BUFFER_BIT = 16384,
+
+    ARRAY_BUFFER = 34962,
+    STATIC_DRAW = 35044,
+    STATIC_READ = 35035,
+}
+
 export interface Modifiers{
     Shift: boolean,
 
 }
 
 export const Render ={
-    get COLOR_BUFFER_BIT() {return 16384; },
-
+    
     initialize(){
-        invokeMethod(ops.op_render_initialize);
+        invokeMethod(ops.opRenderInitialize);
     },
     createWindow(){
         return Window.createWindow();
@@ -45,16 +52,16 @@ export const Render ={
     setClearColor(r: number, g: number, b: number, a: number){
         let buffer = new ArrayBuffer(16);
         let view = new DataView(buffer);
-        view.setFloat32(0,r,true);
-        view.setFloat32(4,g,true);
-        view.setFloat32(8,b,true);
-        view.setFloat32(12,a,true);
-        invokeMethod(ops.op_set_clear_color,new Uint8Array(buffer));
+        view.setFloat32(0,r,false);
+        view.setFloat32(4,g,false);
+        view.setFloat32(8,b,false);
+        view.setFloat32(12,a,false);
+        invokeMethod(ops.opSetClearColor,new Uint8Array(buffer));
     },
 
     clear(mask: number){
         let buffer = intToBuf(mask);
-        invokeMethod(ops.op_clear,buffer);
+        invokeMethod(ops.opClear,buffer);
     },
 
     cleanUp(){
@@ -84,7 +91,7 @@ export class Window{
     }
 
     static createWindow(): Window{
-        const buf: Uint8Array = invokeMethod(ops.op_render_create_window);
+        const buf: Uint8Array = invokeMethod(ops.opRenderCreateWindow);
         if (buf.length === 1){
             return new Window();
         }
@@ -94,7 +101,7 @@ export class Window{
     }
 
     makeCurrent(){
-        invokeMethod(ops.op_render_window_make_current,this.#windowId);
+        invokeMethod(ops.opRenderWindowMakeCurrent,this.#windowId);
     }
     
     static setClearColor(r: number, g: number, b: number, a: number){
@@ -106,10 +113,10 @@ export class Window{
     }
 
     shouldClose(){
-        return  invokeMethod(ops.op_render_window_should_close,this.#windowId)[0] === 1;
+        return  invokeMethod(ops.opRenderWindowShouldClose,this.#windowId)[0] === 1;
     }
     swapBuffers(){
-        invokeMethod(ops.op_render_swap_buffers,this.#windowId);
+        invokeMethod(ops.opRenderSwapBuffers,this.#windowId);
     }
 
     addListener(listener: listenerTypes){
@@ -117,14 +124,14 @@ export class Window{
         if (list == null || list == undefined){
             list = [];
             this.#listeners.set(listener.event,list);
-            invokeMethod(ops.op_render_window_activate_key_polling,this.#windowId)
+            invokeMethod(ops.opRenderWindowActivateKeyPolling,this.#windowId)
         }
 
         list.push(listener.listener);
     }
 
     poll(){
-        const events: Uint8Array = invokeMethod(ops.op_render_poll_events,this.#windowId);
+        const events: Uint8Array = invokeMethod(ops.opRenderPollEvents,this.#windowId);
         let i = 0;
         while(i < events.length){
             switch (events[i] as WindowEvents){
@@ -145,13 +152,38 @@ export class Window{
     }
 }
 
-/*
-argTest(...args: any){
-        let input = args.map((v: any) => encoder.encode(JSON.stringify(v)));
-        (Deno as any).core.opSync("op_arg_test",args,new Float32Array([1,2,3]));
-    },
-    returnTest(){
-        return (Deno as any).core.opSync("op_return_test");
+export class GlBuffer{
+    #bufferId: number;
+    #bufferType: number;
+    private constructor(bufferId: number,bufferType:number){
+        this.#bufferId = bufferId ?? 0;
+        this.#bufferType = bufferType
+    }
+    static createArrayBuffer(){
+        let bufferId = invokeMethod(ops.opCreateBuffer);
+        return new GlBuffer(bufToInt(bufferId),GlEnums.ARRAY_BUFFER);
     }
 
-*/
+    setData(data: Float32Array,usage: GlEnums.STATIC_DRAW | GlEnums.STATIC_READ){
+        //layout id target size usage buffer
+        const buffer = new Uint8Array(4 + 4 + 4 + 4 + data.buffer.byteLength);
+        const view = new DataView(buffer.buffer);
+        console.log(buffer.buffer.byteLength);
+        view.setInt32(0,this.#bufferId);
+        view.setInt32(4,this.#bufferType);
+        view.setInt32(8,data.length*4);
+        view.setInt32(12,usage);
+        data.forEach((x, i) =>{
+            view.setFloat32(16+i,x);
+        });
+        invokeMethod(ops.opSetBufferData,buffer);
+    }
+    
+}
+
+export function createSharedBuffer(buffer: Uint8Array){
+    return invokeMethod(ops.createSharedBuffer,buffer);
+}
+export function printSharedBuffer(){
+    return invokeMethod(ops.printSharedBuffer);
+}

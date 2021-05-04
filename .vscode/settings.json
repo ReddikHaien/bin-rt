@@ -7,14 +7,14 @@
         "commands": [
             {
                 "name": "🛠build plugins🛠",
-                "command": "cd lib/gl ; cargo build ; cd ../..",
+                "command": "cd lib/gl ; cargo build ; cargo test ; cd ../..",
                 "color": "orange"
             },
             {
                 "name": "test plugin",
-                "command": "cd lib/gl ; cargo build ; cd ../.. ; deno run --allow-plugin --allow-read --allow-write --unstable main.ts",
+                "command": "cd lib/gl ; cargo build ; cargo test ; cd ../.. ; deno run --allow-plugin --allow-read --allow-write --unstable main.ts",
                 "color": "lime"
-            } 
+            }, 
         ],
     }
 }

@@ -1,6 +1,8 @@
 extern crate glfw;
 extern crate gl;
 
+use gl::types::*;
+
 use glfw::{Action, Glfw};
 
 pub struct RenderData{
