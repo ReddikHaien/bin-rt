@@ -14,13 +14,14 @@ static mut DATA: Option<data::RenderData> = None;
 #[no_mangle]
 pub fn deno_plugin_init(interface: &mut dyn Interface) {
     println!("registrerer metoder");
-    interface.register_op("op_initialize", initialize_render);
-    interface.register_op("op_create_window", create_new_window);
-    interface.register_op("op_window_make_current", window_make_current);
-    interface.register_op("op_poll_events",window_poll);
-    interface.register_op("op_window_should_close", window_should_close);
-    interface.register_op("op_swap_buffers", window_swap_buffer);
-    
+    interface.register_op("op_render_initialize", initialize_render);
+    interface.register_op("op_render_create_window", create_new_window);
+    interface.register_op("op_render_window_make_current", window_make_current);
+    interface.register_op("op_render_poll_events",window_poll);
+    interface.register_op("op_render_window_should_close", window_should_close);
+    interface.register_op("op_render_swap_buffers", window_swap_buffer);
+    interface.register_op("op_render_window_activate_key_poling", window_activate_key_polling);
+
     interface.register_op("op_set_clear_color", set_clear_color);
     interface.register_op("op_clear",clear_window);
 }
@@ -117,7 +118,26 @@ pub fn window_should_close(interface: &mut dyn Interface, zero_copy: Option<Zero
     Op::Sync(OpResponse::Buffer(Box::new([should_close])))
 }
 
+pub fn window_activate_key_polling(interface: &mut dyn Interface, zero_copy: Option<ZeroCopyBuf>) -> Op{
+    let index = zero_copy_to_int(&zero_copy).expect("Failed to convert buffer to int");
+    unsafe{
+        match DATA{
+            Some(ref mut d)=>{
+                let w = &mut d.windows;
+                let tuple = w.get_mut(&index);
+                match tuple{
+                    Some(tuple) =>{
+                        tuple.0.set_key_polling(true);
+                    },
+                    None => panic!("No window with the given id {}",index)
+                }
+            },
+            None => panic!("Render not initialized")
+        }
+    }
 
+    Op::Sync(OpResponse::Buffer(Box::new([0])))    
+}
 
 
 pub fn window_poll(interface: &mut dyn Interface, zero_copy: Option<ZeroCopyBuf>) -> Op{

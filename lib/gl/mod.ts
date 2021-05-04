@@ -1,20 +1,8 @@
-const encoder = new TextEncoder();
+import * as ops from "./pluginLoader.ts"; 
 
-const filename = "gl";
-let suffix = ".so";
-let prefix = "lib";
-
-if (Deno.build.os === "windows") {
-    suffix = ".dll";
-    prefix = "";
+function invokeMethod(op: number, buffer?: Uint8Array): Uint8Array{
+    return (Deno as any).core.opSync(op,null, buffer);
 }
-else if (Deno.build.os === "darwin") {
-    suffix = ".dylib";
-}
-const filepath = `./lib/gl/target/debug/${prefix}${filename}${suffix}`;
-
-const plugin = Deno.openPlugin(filepath); 
-(Deno as any).core.syncOpsCache();
 
 function intToBuf(int: number): Uint8Array{
     return new Uint8Array([int >> 24 & 255, int >> 16 & 255, int >> 8 & 255, int & 255])
@@ -44,60 +32,19 @@ export interface Modifiers{
 
 }
 
-
-export type KeyListener = (key: string, scancode: number, action: Action, modifiers: number) => void;
-
-
-const listeners: Map<WindowEvents,Listener> = new Map();
-
-
 export const Render ={
     get COLOR_BUFFER_BIT() {return 16384; },
 
     initialize(){
-        (Deno as any).core.opSync("op_initialize");
+        invokeMethod(ops.op_render_initialize);
     },
     createWindow(){
-        const buf: Uint8Array = (Deno as any).core.opSync("op_create_window");
-        if (buf.length === 1){
-            return 0;
-        }
-        return bufToInt(buf);
-    },
-    shouldClose(window: number): boolean{
-        const buf: Uint8Array = (Deno as any).core.opSync("op_window_should_close",null, intToBuf(window));
-        return buf[0] === 1;
-    },
-    pollWindow(window: number){
-        const events: Uint8Array = (Deno as any).core.opSync("op_poll_events",null,intToBuf(window));
-        let i = 0;
-        while(i < events.length){
-            switch (events[i] as WindowEvents){
-                case WindowEvents.KeyEvent: {
-                    i++;
-                    let scancode = events[i] << 24 | events[i+1] << 16 | events[i+2] << 8 | events[i+3];
-                    let action = events[i+4];
-                    i+= 5;
-                    let list = listeners.get(WindowEvents.KeyEvent)?.methods as KeyListener[];
-                    list?.forEach(l => l(String.fromCharCode(scancode),scancode,action,0));
-                }
-                break;
-                case WindowEvents.None: i++; break;
-                default: 
-                throw new Error("unknown event id " + events[i]);
-            }
-        }
+        return Window.createWindow();
     },
     makeWindowCurrent(window: number){
         (Deno as any).core.opSync("op_window_make_current",null,intToBuf(window));
     },
 
-    addListener(event: WindowEvents, listener: KeyListener){
-        if (!listeners.has(event)){
-            listeners.set(event,{methods: []});
-        }
-        listeners.get(event)?.methods.push(listener);
-    },
 
     setClearColor(r: number, g: number, b: number, a: number){
         let buffer = new ArrayBuffer(16);
@@ -121,23 +68,78 @@ export const Render ={
 
 
     cleanUp(){
-        Deno.close(plugin);
+        ops.closePlugin();
     },
 }  
 
+type cb = (...args: any[]) => void;
+export type KeyListener = (key: string, scancode: number, action: Action, modifiers: number) => void;
+
+
+type listenerTypes = {
+    event: WindowEvents.KeyEvent,
+    listener: KeyListener
+} | {
+    event: WindowEvents.None,
+    listener: cb
+}
+
+
 export class Window{
     #windowId: Uint8Array;
-    private constructor(windowId?: number){
-        this.#windowId = intToBuf(windowId ?? 0);
+    #listeners: Map<WindowEvents, cb[]>
+    private constructor(windowId?: number|Uint8Array){
+        this.#windowId = (windowId instanceof Uint8Array) ? windowId : intToBuf(windowId ?? 0);
+        this.#listeners = new Map();
     }
+
+    static createWindow(): Window{
+        const buf: Uint8Array = invokeMethod(ops.op_render_create_window);
+        if (buf.length === 1){
+            return new Window();
+        }
+        else{
+            return new Window(buf);
+        }
+    }
+
     shouldClose(){
-        return (Deno as any).core.opSync("op_window_should_close",null, this.#windowId)[0] === 1
+        return  invokeMethod(ops.op_render_window_should_close,this.#windowId)[0] === 1;
     }
     swapBuffers(){
-        (Deno as any).core.opSync("op_swap_buffers",null,this.#windowId);
+        invokeMethod(ops.op_render_swap_buffers,this.#windowId);
     }
-    poll(){
 
+    addListener(listener: listenerTypes){
+        let list = this.#listeners.get(listener.event) as cb[];
+        if (list == null || list == undefined){
+            list = [];
+            this.#listeners.set(listener.event,list);
+            invokeMethod(ops.op_render_window_activate_key_polling,this.#windowId)
+        }
+
+        list.push(listener.listener);
+    }
+
+    poll(){
+        const events: Uint8Array = invokeMethod(ops.op_render_poll_events,this.#windowId);
+        let i = 0;
+        while(i < events.length){
+            switch (events[i] as WindowEvents){
+                case WindowEvents.KeyEvent: {
+                    i++;
+                    let scancode = events[i] << 24 | events[i+1] << 16 | events[i+2] << 8 | events[i+3];
+                    let action = events[i+4];
+                    i+= 5;
+                    let list = this.#listeners.get(WindowEvents.KeyEvent) as KeyListener[];
+                    list?.forEach(l => l(String.fromCharCode(scancode),scancode,action,0));
+                }
+                break;
+                case WindowEvents.None: i++; break;
+                default: 
+                throw new Error("unknown event id " + events[i]);
+            }
+        }
     }
 }
 
