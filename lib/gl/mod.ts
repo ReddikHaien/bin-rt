@@ -125,6 +125,22 @@ export const Render ={
     },
 }  
 
+export class Window{
+    #windowId: Uint8Array;
+    private constructor(windowId?: number){
+        this.#windowId = intToBuf(windowId ?? 0);
+    }
+    shouldClose(){
+        return (Deno as any).core.opSync("op_window_should_close",null, this.#windowId)[0] === 1
+    }
+    swapBuffers(){
+        (Deno as any).core.opSync("op_swap_buffers",null,this.#windowId);
+    }
+    poll(){
+
+    }
+}
+
 /*
 argTest(...args: any){
         let input = args.map((v: any) => encoder.encode(JSON.stringify(v)));
