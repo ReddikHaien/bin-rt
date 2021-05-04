@@ -41,10 +41,6 @@ export const Render ={
     createWindow(){
         return Window.createWindow();
     },
-    makeWindowCurrent(window: number){
-        (Deno as any).core.opSync("op_window_make_current",null,intToBuf(window));
-    },
-
 
     setClearColor(r: number, g: number, b: number, a: number){
         let buffer = new ArrayBuffer(16);
@@ -53,19 +49,13 @@ export const Render ={
         view.setFloat32(4,g,true);
         view.setFloat32(8,b,true);
         view.setFloat32(12,a,true);
-        (Deno as any).core.opSync("op_set_clear_color",null,new Uint8Array(buffer));
+        invokeMethod(ops.op_set_clear_color,new Uint8Array(buffer));
     },
 
     clear(mask: number){
         let buffer = intToBuf(mask);
-        (Deno as any).core.opSync("op_clear",null,buffer);
+        invokeMethod(ops.op_clear,buffer);
     },
-
-    swapWindowBuffer(window: number){
-        let buffer = intToBuf(window);
-        (Deno as any).core.opSync("op_swap_buffers",null,buffer);
-    },
-
 
     cleanUp(){
         ops.closePlugin();
@@ -101,6 +91,18 @@ export class Window{
         else{
             return new Window(buf);
         }
+    }
+
+    makeCurrent(){
+        invokeMethod(ops.op_render_window_make_current,this.#windowId);
+    }
+    
+    static setClearColor(r: number, g: number, b: number, a: number){
+        Render.setClearColor(r,g,b,a);
+    }
+
+    clear(mask: number){
+        Render.clear(mask);
     }
 
     shouldClose(){

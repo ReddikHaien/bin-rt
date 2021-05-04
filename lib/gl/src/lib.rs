@@ -17,7 +17,7 @@ pub fn deno_plugin_init(interface: &mut dyn Interface) {
     interface.register_op("op_render_initialize", initialize_render);
     interface.register_op("op_render_create_window", create_new_window);
     interface.register_op("op_render_window_make_current", window_make_current);
-    interface.register_op("op_render_poll_events",window_poll);
+    interface.register_op("op_render_window_poll_events",window_poll);
     interface.register_op("op_render_window_should_close", window_should_close);
     interface.register_op("op_render_swap_buffers", window_swap_buffer);
     interface.register_op("op_render_window_activate_key_poling", window_activate_key_polling);
