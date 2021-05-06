@@ -4,8 +4,6 @@ Render.initialize();
 const window = Render.createWindow();
 window.makeCurrent();
 
-Render.setClearColor(0,0,0,1);
-
 let buffer = GlBuffer.createArrayBuffer();
 buffer.setData(new Float32Array([1,2,3]),GlEnums.STATIC_DRAW);
 
@@ -19,6 +17,5 @@ while(!window.shouldClose()){
 
 Render.cleanUp();
 console.log("Dette virket!!");
-
 
 

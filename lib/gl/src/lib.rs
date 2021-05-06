@@ -1,5 +1,7 @@
 #[path = "./data.rs"] mod data;
 
+mod bufferManager;
+
 use glfw::{Action, Context, Key};
 use gl;
 
@@ -10,11 +12,16 @@ use deno_core::plugin_api::ZeroCopyBuf;
 use futures::future::FutureExt;
 use std::convert::TryInto;
 
+
+
 static mut DATA: Option<data::RenderData> = None;
 
 #[no_mangle]
 pub fn deno_plugin_init(interface: &mut dyn Interface) {
     println!("registrerer metoder");
+
+    bufferManager::initialize(interface);
+    
     interface.register_op("op_render_initialize", initialize_render);
     interface.register_op("op_render_create_window", create_new_window);
     interface.register_op("op_render_window_make_current", window_make_current);
@@ -31,6 +38,7 @@ pub fn deno_plugin_init(interface: &mut dyn Interface) {
 }
 
 pub fn initialize_render(interface: &mut dyn Interface, zero_copy: Option<ZeroCopyBuf>) -> Op {
+
     let ginstance = glfw::init(glfw::FAIL_ON_ERRORS).expect("Failed to initialize glfw");
 
     unsafe {

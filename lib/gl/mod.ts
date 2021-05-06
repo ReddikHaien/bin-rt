@@ -12,9 +12,6 @@ function bufToInt(buf: Uint8Array): number{
     return buf[0] << 24 | buf[1] << 16 | buf[2] << 8 | buf[3];
 }
 
-interface Listener{
-    methods: Function[]
-}
 
 export enum WindowEvents{
     None = 0,
@@ -155,8 +152,11 @@ export class Window{
 export class GlBuffer{
     #bufferId: number;
     #bufferType: number;
+    //a bufferid for the buffer on the other side
     #sharedBufferReference: number;
+    //an instance of a buffer who is referenced on the other side
     #sharedBufferInstance: Uint8Array;
+
     private constructor(bufferId: number,bufferType:number){
         this.#bufferId = bufferId ?? 0;
         this.#bufferType = bufferType;
@@ -179,6 +179,7 @@ export class GlBuffer{
         view.setInt32(12,usage);
 
         if (data.byteLength > this.#sharedBufferInstance.byteLength || data.byteLength < this.#sharedBufferInstance.length*0.7){
+            //needs buffer resize
             
         }
 

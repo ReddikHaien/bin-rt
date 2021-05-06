@@ -1,0 +1,33 @@
+Ide 1:
+Basis:
+
+    shareBuffer(buffer):
+        deler en ArrayBuffer med rust
+        returnerer en peker til denne bufferen
+
+    dropBuffer(arrayBufferId):
+        frigjør en ArrayBuffer fra rust
+
+Ide 2
+    pushBuffer(buffer):
+        skubber en buffer til rust for å brukes i den neste operasjonen
+
+
+
+Standard
+OpenGL:
+    Buffers: 
+        createBuffer()
+            lager en ny buffer
+            returnerer bufferId
+
+        BindBuffer(bufferId)
+            binder bufferen med bufferId
+
+        BufferData(target, size, arrayBufferId, usage)
+            Setter bufferdataen til dataen tilgjengelig i arrayBufferId
+        
+        BufferSubData()
+            Setter bufferdataen på index
+            Om den nye dataen får plass i den eksisterende bufferen så blir den originale bufferen brukt
+            Ellers vil en tilstrekkelig buffer bli produsert
