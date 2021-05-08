@@ -11,6 +11,7 @@ static mut STACK: Option<BufferStack> = None;
 
 pub fn initialize(interface: & mut dyn Interface){
     interface.register_op("op_push_buffer", push_buffer);
+    interface.register_op("op_pop_buffer", pop_buffer);
 
     unsafe{
         STACK = Some(BufferStack{
@@ -33,5 +34,18 @@ pub fn push_buffer(_interface: & mut dyn Interface, zero_copy: Option<ZeroCopyBu
         }
         None => panic!("expected buffer recieved nothing")
     }
+    Op::Sync(OpResponse::Buffer(Box::new([0])))
+}
+
+pub fn pop_buffer(_interface: & mut dyn Interface, _zero_copy: Option<ZeroCopyBuf>) -> Op{
+    unsafe{
+        match STACK{
+            Some(ref mut d) =>{
+                d.stack.pop();
+            },
+            None => ()
+        }
+    }
+
     Op::Sync(OpResponse::Buffer(Box::new([0])))
 }
