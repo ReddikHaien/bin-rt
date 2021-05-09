@@ -49,3 +49,14 @@ pub fn pop_buffer(_interface: & mut dyn Interface, _zero_copy: Option<ZeroCopyBu
 
     Op::Sync(OpResponse::Buffer(Box::new([0])))
 }
+
+pub fn get_buffer() -> Option<ZeroCopyBuf>{
+    unsafe{
+        match STACK{
+            Some(ref mut d) =>{
+                d.stack.pop()
+            },
+            None => None
+        }
+    }
+}

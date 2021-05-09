@@ -22,12 +22,9 @@ pub fn deno_plugin_init(interface: &mut dyn Interface) {
 
 pub fn initialize_render(_interface: &mut dyn Interface, _zero_copy: Option<ZeroCopyBuf>) -> Op {
 
-    glfw_manager::initialize_glfw(String::from("Test"), 800, 600);
+    let nameBuf = buffer_manager::get_buffer().expect("expected buffer for name, recieved nothing");
+
+    glfw_manager::initialize_glfw(String::from_utf8(nameBuf), 800, 600);
     
     Op::Sync(OpResponse::Buffer(Box::new([0])))
 }
-
-
-
-
-
