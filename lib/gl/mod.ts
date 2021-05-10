@@ -10,7 +10,9 @@ function invokeMethod(op: number, buffer?: Uint8Array): Uint8Array{
 export enum GlEnums{
     COLOR_BUFFER_BIT = 16384,
 
-    ARRAY_BUFFER = 34962,
+    ARRAY_BUFFER         = 0x8892,
+    ELEMENT_ARRAY_BUFFER = 0x8893,
+
     STATIC_DRAW = 35044,
     STATIC_READ = 35035,
 }
@@ -33,6 +35,11 @@ function createView(bytesize: number){
     let buf = new Uint8Array(bytesize);
     let view = new DataView(buf.buffer);
     return {buf, view};
+}
+const argumentBuffer = createView(12);
+
+function bufferToU32(buffer: Uint8Array, offset: number){
+    return buffer[0+offset] << 24 | buffer[1+offset] << 16 | buffer[2+offset] << 8 | buffer[3+offset];
 }
 
 export function initializeRender(options: WindowOptions){
@@ -91,7 +98,7 @@ export class Buffer{
 const gl = {
     //=============================== BUFFER =====================//
     createBuffer(): Buffer{
-        throw new Error("not implemented 'createBuffer'");
+        return new Buffer(bufferToU32(invokeMethod(ops.opCreateBuffer),0));
     },
     deleteBuffer(buffer: Buffer){
         throw new Error("not implemented deleteBuffer");
@@ -102,6 +109,13 @@ const gl = {
     isBuffer(buffer: any): boolean{
         throw new Error("not implemented isBuffer");
     },
+    bindBuffer(target: GlEnums.ARRAY_BUFFER | GlEnums.ELEMENT_ARRAY_BUFFER, buffer: Buffer){
+        throw new Error("not implemented bindBuffer");
+    },
+    bufferData(target: GlEnums.ARRAY_BUFFER | GlEnums.ELEMENT_ARRAY_BUFFER, size: number|ArrayBufferView, usage: GlEnums.STATIC_DRAW|GlEnums.STATIC_READ){
+        throw new Error("not implemented bufferData");
+    },
+
 
     //=============================== SHADER =====================//
     attatchShader(program: Program, shader: Shader){
@@ -181,11 +195,22 @@ const gl = {
     },
 
 
-    // ===================== MISC =======
+    //====================== MISC ================//
     clear(mask: number){
         throw new Error("not implemented clear");
     },
     setClearColor(r: number, g: number, b: number, a: number){
         throw new Error("not implemented setClearColor");
+    },
+
+    //==================== GLFW ==================//
+    shouldWindowClose(){
+        return invokeMethod(ops.opShouldWindowClose)[0] == 1;
+    },
+    pollEvents(){
+        invokeMethod(ops.opPollEvents);
+    },
+    swapWindowBuffers(){
+        invokeMethod(ops.opSwapWindowBuffers);
     }
 }

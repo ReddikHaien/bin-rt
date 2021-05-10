@@ -20,6 +20,12 @@ export const opRenderInitialize = ops.op_render_initialize;
 export const opPushBuffer = ops.op_push_buffer;
 export const opPopBuffer = ops.op_pop_buffer;
 
+export const opCreateBuffer = ops.op_create_buffer;
+
+export const opShouldWindowClose = ops.op_should_window_close;
+export const opPollEvents = ops.op_poll_events;
+export const opSwapWindowBuffers = ops.op_swap_buffers;
+
 export function closePlugin(){
     Deno.close(plugin);
 }

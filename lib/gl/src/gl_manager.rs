@@ -18,6 +18,6 @@ pub fn create_buffer(_interface: &mut dyn Interface, _zero_copy: Option<ZeroCopy
     Op::Sync(OpResponse::Buffer(Box::new(index.to_be_bytes())))
 }
 
-pub fn set_buffer_date(_interface: &mut dyn Interface, zero_copy: Option<ZeroCopyBuf>) -> Op{
+pub fn set_buffer_data(_interface: &mut dyn Interface, zero_copy: Option<ZeroCopyBuf>) -> Op{
     Op::Sync(OpResponse::Buffer(Box::new([0])))
 }
