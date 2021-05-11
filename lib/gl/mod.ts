@@ -97,6 +97,18 @@ export class Buffer{
 
 const gl = {
 
+    //#region Basis
+
+    blendColor(r: number,g: number,b: number,a: number){
+        throw new Error("not implemented blendColor");
+    },
+
+    blendEquation(mode: GlEnums){
+        throw new Error("not implemented blendEquation");
+    },
+    //#endregion
+
+
 //#region Buffer
     createBuffer(): Buffer{
         return new Buffer(bufferToU32(invokeMethod(ops.opCreateBuffer),0));
