@@ -22,6 +22,9 @@ export const opPopBuffer = ops.op_pop_buffer;
 
 export const opCreateBuffer = ops.op_create_buffer;
 
+export const opSetClearColor = ops.op_set_clear_color;
+export const opClear = ops.op_clear;
+
 export const opShouldWindowClose = ops.op_should_window_close;
 export const opPollEvents = ops.op_poll_events;
 export const opSwapWindowBuffers = ops.op_swap_buffers;

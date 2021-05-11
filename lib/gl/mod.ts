@@ -36,7 +36,7 @@ function createView(bytesize: number){
     let view = new DataView(buf.buffer);
     return {buf, view};
 }
-const argumentBuffer = createView(12);
+const argumentBuffer = createView(16);
 
 function bufferToU32(buffer: Uint8Array, offset: number){
     return buffer[0+offset] << 24 | buffer[1+offset] << 16 | buffer[2+offset] << 8 | buffer[3+offset];
@@ -197,10 +197,15 @@ const gl = {
 
     //====================== MISC ================//
     clear(mask: number){
-        throw new Error("not implemented clear");
+        argumentBuffer.view.setUint32(0,mask);
+        invokeMethod(ops.opClear,argumentBuffer.buf);
     },
     setClearColor(r: number, g: number, b: number, a: number){
-        throw new Error("not implemented setClearColor");
+        argumentBuffer.view.setFloat32(0,r);
+        argumentBuffer.view.setFloat32(4,b);
+        argumentBuffer.view.setFloat32(8,g);
+        argumentBuffer.view.setFloat32(12,a);
+        invokeMethod(ops.opSetClearColor,argumentBuffer.buf);
     },
 
     //==================== GLFW ==================//

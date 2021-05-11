@@ -6,10 +6,12 @@ const gl = initializeRender({
     title: "Dette er en test"
 });
 
+gl.setClearColor(0.9,1,0.8,1);
 
 while(!gl.shouldWindowClose()){
     gl.pollEvents();
 
+    gl.clear(GlEnums.COLOR_BUFFER_BIT);
 
     gl.swapWindowBuffers();
 }
