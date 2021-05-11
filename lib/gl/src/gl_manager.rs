@@ -5,9 +5,13 @@ use deno_core::plugin_api::ZeroCopyBuf;
 use gl;
 
 use crate::util;
+use crate::buffer_manager;
 
 pub fn initialize_plugin(interface: &mut dyn Interface){
     interface.register_op("op_create_buffer", create_buffer);
+    interface.register_op("op_set_buffer_data_size", set_buffer_data_size);
+    interface.register_op("op_set_buffer_data_arr", set_buffer_data_arr);
+
     interface.register_op("op_set_clear_color", set_clear_color);
     interface.register_op("op_clear", clear);
 }
@@ -23,10 +27,27 @@ pub fn create_buffer(_interface: &mut dyn Interface, _zero_copy: Option<ZeroCopy
 fn set_buffer_data_size(_interface: &mut dyn Interface, zero_copy: Option<ZeroCopyBuf>) -> Op{
     let slice = &zero_copy.unwrap()[..];
     let target = util::slice_to_int(slice, 0);
+    let size = util::slice_to_int(slice, 4) as isize;
+    let usage = util::slice_to_int(slice, 8);
+
+    unsafe{
+        gl::BufferData(target,size,std::ptr::null(),usage);
+    }
+
     Op::Sync(OpResponse::Buffer(Box::new([0])))
 }
 
 fn set_buffer_data_arr(_interface: &mut dyn Interface, zero_copy: Option<ZeroCopyBuf>) -> Op{
+    let slice = &zero_copy.unwrap()[..];
+    let target = util::slice_to_int(slice, 0);
+    let usage = util::slice_to_int(slice, 4);
+    let buffer = buffer_manager::get_buffer().unwrap();
+    let size = buffer.len() as isize;
+
+    unsafe{
+        gl::BufferData(target,size,buffer.as_ptr() as *const std::ffi::c_void ,usage);
+    }
+
     Op::Sync(OpResponse::Buffer(Box::new([0])))
 }
 

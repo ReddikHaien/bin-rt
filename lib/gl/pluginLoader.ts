@@ -21,6 +21,8 @@ export const opPushBuffer = ops.op_push_buffer;
 export const opPopBuffer = ops.op_pop_buffer;
 
 export const opCreateBuffer = ops.op_create_buffer;
+export const opSetBufferDataSize = ops.op_set_buffer_data_size;
+export const opSetBufferDataArr = ops.op_set_buffer_data_arr;
 
 export const opSetClearColor = ops.op_set_clear_color;
 export const opClear = ops.op_clear;

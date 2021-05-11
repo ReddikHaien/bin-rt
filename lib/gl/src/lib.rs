@@ -22,12 +22,12 @@ pub fn deno_plugin_init(interface: &mut dyn Interface) {
 
 pub fn initialize_render(_interface: &mut dyn Interface, zero_copy: Option<ZeroCopyBuf>) -> Op {
 
-    let nameBuf = buffer_manager::get_buffer().expect("expected buffer for name, recieved nothing");
+    let name_buf = buffer_manager::get_buffer().expect("expected buffer for name, recieved nothing");
     let slice = &zero_copy.unwrap()[..];
     let width = util::slice_to_int(slice, 0);
     let height = util::slice_to_int(slice, 4);
 
-    glfw_manager::initialize_glfw(String::from_utf8(nameBuf.to_vec()).expect("Failed to convert slice to string"), width, height);
+    glfw_manager::initialize_glfw(String::from_utf8(name_buf.to_vec()).expect("Failed to convert slice to string"), width, height);
     
     Op::Sync(OpResponse::Buffer(Box::new([0])))
 }

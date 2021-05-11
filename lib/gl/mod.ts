@@ -113,7 +113,26 @@ const gl = {
         throw new Error("not implemented bindBuffer");
     },
     bufferData(target: GlEnums.ARRAY_BUFFER | GlEnums.ELEMENT_ARRAY_BUFFER, size: number|ArrayBufferView, usage: GlEnums.STATIC_DRAW|GlEnums.STATIC_READ){
-        throw new Error("not implemented bufferData");
+        switch(typeof size){
+            case "number": {
+                argumentBuffer.view.setUint32(0,target);
+                argumentBuffer.view.setUint32(4,size);
+                argumentBuffer.view.setUint32(8,usage);
+                invokeMethod(ops.opSetBufferDataSize,argumentBuffer.buf);
+            } break;
+            case "object": {
+                if (!ArrayBuffer.isView(size)){
+                    throw new Error("expected buffer recieved " + size);
+                }
+                argumentBuffer.view.setUint32(0,target);
+                argumentBuffer.view.setUint32(4,usage);
+                pushBuffer(new Uint8Array(size.buffer));
+                invokeMethod(ops.opSetBufferDataArr,argumentBuffer.buf);
+            } break;
+            default: {
+                throw new Error("expected number or object recieved " + typeof(size));
+            }  
+        }
     },
 
 
