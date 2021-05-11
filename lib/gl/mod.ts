@@ -96,21 +96,25 @@ export class Buffer{
 }
 
 const gl = {
-    //=============================== BUFFER =====================//
+
+//#region Buffer
     createBuffer(): Buffer{
         return new Buffer(bufferToU32(invokeMethod(ops.opCreateBuffer),0));
     },
     deleteBuffer(buffer: Buffer){
-        throw new Error("not implemented deleteBuffer");
+        argumentBuffer.view.setUint32(0,buffer.bufferId);
+        invokeMethod(ops.opDeleteBuffer,argumentBuffer.buf);
     },
     getBufferParameter(buffer: Buffer, pname: GlEnums): any{
         throw new Error("not implemented getBufferParameter");
     },
     isBuffer(buffer: any): boolean{
-        throw new Error("not implemented isBuffer");
+        return buffer instanceof Buffer;
     },
-    bindBuffer(target: GlEnums.ARRAY_BUFFER | GlEnums.ELEMENT_ARRAY_BUFFER, buffer: Buffer){
-        throw new Error("not implemented bindBuffer");
+    bindBuffer(target: GlEnums.ARRAY_BUFFER | GlEnums.ELEMENT_ARRAY_BUFFER, buffer: Buffer|null){
+        argumentBuffer.view.setUint32(0,target);
+        argumentBuffer.view.setUint32(0,buffer?.bufferId ?? 0);
+        invokeMethod(ops.opBindBuffer,argumentBuffer.buf);
     },
     bufferData(target: GlEnums.ARRAY_BUFFER | GlEnums.ELEMENT_ARRAY_BUFFER, size: number|ArrayBufferView, usage: GlEnums.STATIC_DRAW|GlEnums.STATIC_READ){
         switch(typeof size){
@@ -134,9 +138,16 @@ const gl = {
             }  
         }
     },
+    bufferSubData(target: GlEnums.ARRAY_BUFFER | GlEnums.ELEMENT_ARRAY_BUFFER, offset: number, source: ArrayBufferView, sourceOffset=0){
+        argumentBuffer.view.setUint32(0,target);
+        argumentBuffer.view.setUint32(4,offset);
+        argumentBuffer.view.setUint32(8,sourceOffset);
+        pushBuffer(new Uint8Array(source.buffer));
+        invokeMethod(ops.opSetBufferSubData,argumentBuffer.buf);
+    },
+//#endregion
 
-
-    //=============================== SHADER =====================//
+//#region Shader
     attatchShader(program: Program, shader: Shader){
         throw new Error("not implemented attachShader");
     },
@@ -188,9 +199,9 @@ const gl = {
     validateProgram(program: Program){
         throw new Error("not implemented validatedProgram");
     },
-
+//#endregion
     
-    //=============================== UNIFORMS AND ATTRIBS =======//
+//#region Uniforms and Attributes
     disableVertexAttribArray(index: number){
         throw new Error("not implemented disableVertexAttribArray");
     },
@@ -212,21 +223,23 @@ const gl = {
     getUniformLocation(program: Program, name: string): UniformLocation{
         throw new Error("not implemented getUniformLocation");
     },
+//#endregion
 
-
-    //====================== MISC ================//
+//#region Drawbuffer operations
     clear(mask: number){
         argumentBuffer.view.setUint32(0,mask);
         invokeMethod(ops.opClear,argumentBuffer.buf);
     },
-    setClearColor(r: number, g: number, b: number, a: number){
+    clearColor(r: number, g: number, b: number, a: number){
         argumentBuffer.view.setFloat32(0,r);
         argumentBuffer.view.setFloat32(4,b);
         argumentBuffer.view.setFloat32(8,g);
         argumentBuffer.view.setFloat32(12,a);
         invokeMethod(ops.opSetClearColor,argumentBuffer.buf);
     },
+//#endregion
 
+//#region GLFW
     //==================== GLFW ==================//
     shouldWindowClose(){
         return invokeMethod(ops.opShouldWindowClose)[0] == 1;
@@ -237,4 +250,5 @@ const gl = {
     swapWindowBuffers(){
         invokeMethod(ops.opSwapWindowBuffers);
     }
+//#endregion
 }
